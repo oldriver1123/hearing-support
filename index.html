@@ -391,6 +391,8 @@ function stopRecognition() {
 }
 
 function startRecognition() {
+  if (isRunning) return;
+
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SR) {
     summaryEl.className = '';
@@ -402,19 +404,20 @@ function startRecognition() {
     return;
   }
 
-  recognition = new SR();
-  recognition.lang = 'ja-JP';
-  recognition.interimResults = true;
-  recognition.continuous = true;
-  recognition.maxAlternatives = 1;
+  isRunning = true;
 
-  recognition.onstart = () => {
+  const r = new SR();
+  r.lang = 'ja-JP';
+  r.interimResults = true;
+  r.continuous = true;
+  r.maxAlternatives = 1;
+
+  r.onstart = () => {
     dot.className = 'active';
     statusText.textContent = '認識中';
-    isRunning = true;
   };
 
-  recognition.onresult = (e) => {
+  r.onresult = (e) => {
     let interim = '';
     let finalChunk = '';
     for (let i = e.resultIndex; i < e.results.length; i++) {
@@ -431,9 +434,11 @@ function startRecognition() {
     interimEl.textContent = interim;
   };
 
-  recognition.onerror = (e) => {
+  r.onerror = (e) => {
     if (e.error === 'no-speech') { setLevel(false); return; }
+    if (e.error === 'aborted') { return; }
     if (e.error === 'not-allowed') {
+      isRunning = false;
       dot.className = 'error';
       statusText.textContent = 'マイク未許可';
       summaryEl.className = '';
@@ -443,12 +448,17 @@ function startRecognition() {
     }
   };
 
-  recognition.onend = () => {
+  r.onend = () => {
     setLevel(false);
-    if (isRunning) setTimeout(() => recognition && recognition.start(), 200);
+    recognition = null;
+    if (isRunning) {
+      isRunning = false;
+      setTimeout(startRecognition, 500);
+    }
   };
 
-  recognition.start();
+  recognition = r;
+  r.start();
 }
 </script>
 </body>
