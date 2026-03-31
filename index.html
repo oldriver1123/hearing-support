@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>聴こえサポート</title>
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Yu Gothic UI', 'Meiryo', sans-serif;
+      background: #f5f1e8;
+      color: #1a1a1a;
+      height: 100vh;
+      overflow: hidden;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+
+    /* ===== SETUP SCREEN ===== */
+    #setup-screen {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      background: #f5f1e8;
+      padding: 32px 24px;
+    }
+
+    .setup-logo {
+      font-size: 40px;
+      margin-bottom: 10px;
+    }
+
+    #setup-screen h1 {
+      font-size: 30px;
+      font-weight: 700;
+      color: #1a1a1a;
+      margin-bottom: 6px;
+      letter-spacing: 0.02em;
+    }
+
+    #setup-screen .subtitle {
+      font-size: 15px;
+      color: #7a7060;
+      margin-bottom: 36px;
+    }
+
+    .setup-card {
+      background: #fff;
+      border-radius: 20px;
+      padding: 32px 36px;
+      width: 100%;
+      max-width: 460px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+    }
+
+    .setup-card label {
+      display: block;
+      font-size: 13px;
+      font-weight: 700;
+      color: #555;
+      margin-bottom: 8px;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .input-wrap {
+      position: relative;
+    }
+
+    .input-wrap input {
+      width: 100%;
+      padding: 13px 44px 13px 16px;
+      border: 2px solid #ddd8cc;
+      border-radius: 12px;
+      font-size: 15px;
+      color: #1a1a1a;
+      background: #faf9f5;
+      outline: none;
+      transition: border-color 0.2s;
+      font-family: monospace;
+    }
+
+    .input-wrap input:focus {
+      border-color: #8a7a5a;
+    }
+
+    .toggle-pw {
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 18px;
+      color: #aaa;
+      padding: 4px;
+      line-height: 1;
+    }
+
+    .hint {
+      font-size: 12px;
+      color: #aaa;
+      margin-top: 7px;
+      line-height: 1.5;
+    }
+
+    .btn-primary {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      padding: 15px;
+      background: #3d3020;
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      font-size: 17px;
+      font-weight: 700;
+      cursor: pointer;
+      margin-top: 24px;
+      transition: background 0.2s, transform 0.1s;
+      letter-spacing: 0.04em;
+    }
+
+    .btn-primary:hover { background: #2a2010; }
+    .btn-primary:active { transform: scale(0.98); }
+
+    .skip-link {
+      display: block;
+      text-align: center;
+      margin-top: 14px;
+      font-size: 13px;
+      color: #aaa;
+      cursor: pointer;
+      text-decoration: underline;
+      text-underline-offset: 3px;
+      transition: color 0.2s;
+    }
+
+    .skip-link:hover { color: #666; }
+
+    .fallback-note {
+      margin-top: 20px;
+      padding: 12px 16px;
+      background: #f5f1e8;
+      border-radius: 10px;
+      font-size: 12px;
+      color: #888;
+      line-height: 1.6;
+      border-left: 3px solid #d8d0bc;
+    }
+
+    /* ===== MAIN SCREEN ===== */
+    #main-screen {
+      display: none;
+      flex-direction: column;
+      height: 100vh;
+    }
+
+    /* Volume bar */
+    #volume-bar-container {
+      height: 5px;
+      background: #e8e4dc;
+      flex-shrink: 0;
+      overflow: hidden;
+    }
+
+    #volume-bar {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(to right, #7ab87a, #3d9c3d);
+      border-radius: 0 3px 3px 0;
+    }
+
+    /* Header */
+    #header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+      height: 48px;
+      background: #e8e4dc;
+      flex-shrink: 0;
+      border-bottom: 1px solid #d8d4cc;
+    }
+
+    #listen-indicator {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      color: #666;
+      min-width: 160px;
+    }
+
+    #listen-dot {
+      width: 11px;
+      height: 11px;
+      border-radius: 50%;
+      background: #bbb;
+      flex-shrink: 0;
+      transition: background 0.3s;
+    }
+
+    #listen-dot.active {
+      background: #4caf50;
+      animation: blink 1.2s ease-in-out infinite;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(76,175,80,0.4); }
+      50% { opacity: 0.4; box-shadow: 0 0 0 4px rgba(76,175,80,0); }
+    }
+
+    #header-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: #3d3020;
+      letter-spacing: 0.03em;
+    }
+
+    #settings-btn {
+      background: none;
+      border: none;
+      font-size: 22px;
+      cursor: pointer;
+      color: #666;
+      padding: 6px 8px;
+      border-radius: 8px;
+      transition: background 0.2s;
+      min-width: 40px;
+      text-align: right;
+    }
+
+    #settings-btn:hover { background: #d5d0c8; }
+
+    /* Summary area (top ~70%) */
+    #summary-area {
+      flex: 70;
+      background: #f5f1e8;
+      padding: 20px 32px 16px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      gap: 14px;
+      scroll-behavior: smooth;
+    }
+
+    #summary-placeholder {
+      margin: auto;
+      text-align: center;
+      color: #c8c0b0;
+      font-size: 26px;
+      font-weight: 300;
+      letter-spacing: 0.1em;
+    }
+
+    .summary-item {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      animation: slideUp 0.25s ease;
+    }
+
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 3px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 700;
+      align-self: flex-start;
+      letter-spacing: 0.06em;
+    }
+
+    .badge-question { background: #e8d8a0; color: #7a5800; }
+    .badge-summary  { background: #bde8bd; color: #1a5a1a; }
+    .badge-raw      { background: #d0d0e8; color: #2a2a60; }
+
+    .summary-text {
+      font-size: 40px;
+      font-weight: 700;
+      color: #1a1a1a;
+      line-height: 1.3;
+      word-break: break-all;
+    }
+
+    .summary-text strong.kw {
+      font-weight: 900;
+      color: #000;
+      text-decoration: underline;
+      text-decoration-color: #c8a040;
+      text-underline-offset: 4px;
+    }
+
+    /* Thinking animation */
+    .thinking-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      animation: slideUp 0.25s ease;
+    }
+
+    .thinking-label {
+      font-size: 30px;
+      color: #aaa;
+      font-weight: 400;
+    }
+
+    .dots {
+      display: inline-flex;
+      gap: 5px;
+      align-items: center;
+      margin-left: 4px;
+    }
+
+    .dots span {
+      display: inline-block;
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #bbb;
+      animation: dotBounce 1.2s ease-in-out infinite;
+    }
+
+    .dots span:nth-child(2) { animation-delay: 0.18s; }
+    .dots span:nth-child(3) { animation-delay: 0.36s; }
+
+    @keyframes dotBounce {
+      0%, 80%, 100% { transform: scale(0.7); opacity: 0.4; }
+      40%           { transform: scale(1.2); opacity: 1; }
+    }
+
+    /* Divider */
+    #divider {
+      height: 4px;
+      background: #e8e4dc;
+      flex-shrink: 0;
+    }
+
+    /* Full text area (bottom ~30%) */
+    #fulltext-area {
+      flex: 30;
+      background: #ede9e0;
+      padding: 14px 32px 16px;
+      overflow-y: auto;
+      scroll-behavior: smooth;
+    }
+
+    #fulltext-label {
+      font-size: 11px;
+      font-weight: 700;
+      color: #b0a898;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    #fulltext-content {
+      font-size: 19px;
+      color: #444;
+      line-height: 1.7;
+    }
+
+    #fulltext-content strong.kw {
+      font-weight: 800;
+      color: #1a1a1a;
+    }
+
+    #current-interim {
+      color: #aaa;
+      font-style: italic;
+    }
+  </style>
+</head>
+<body>
+
+<!-- ===== SETUP SCREEN ===== -->
+<div id="setup-screen">
+  <div class="setup-logo">👂</div>
+  <h1>聴こえサポート</h1>
+  <p class="subtitle">会話の内容をリアルタイムで要約します</p>
+
+  <div class="setup-card">
+    <label for="api-key-input">Anthropic APIキー</label>
+    <div class="input-wrap">
+      <input type="password" id="api-key-input" placeholder="sk-ant-api03-..." autocomplete="off" spellcheck="false" />
+      <button class="toggle-pw" id="toggle-pw-btn" onclick="togglePw()" title="表示切替">👁</button>
+    </div>
+    <p class="hint">APIキーはこのブラウザのみに保存され、外部には送信されません</p>
+
+    <button class="btn-primary" onclick="startWithKey()">開始する →</button>
+    <a class="skip-link" onclick="startWithoutKey()">キーなしで試す</a>
+
+    <div class="fallback-note">
+      キーなしの場合、簡易ルールによる自動判定になります。<br>
+      疑問文の検出・短文スキップ・文字数カットで動作します。
+    </div>
+  </div>
+</div>
+
+<!-- ===== MAIN SCREEN ===== -->
+<div id="main-screen">
+  <div id="volume-bar-container">
+    <div id="volume-bar"></div>
+  </div>
+
+  <div id="header">
+    <div id="listen-indicator">
+      <div id="listen-dot"></div>
+      <span id="listen-status">起動中...</span>
+    </div>
+    <div id="header-title">聴こえサポート</div>
+    <button id="settings-btn" onclick="showSetup()" title="設定">⚙</button>
+  </div>
+
+  <div id="summary-area">
+    <div id="summary-placeholder">話しかけてください…</div>
+  </div>
+
+  <div id="divider"></div>
+
+  <div id="fulltext-area">
+    <div id="fulltext-label">認識テキスト</div>
+    <div id="fulltext-content"><span id="current-interim"></span></div>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+// ===== STATE =====
+let apiKey = '';
+let recognition = null;
+let silenceTimer = null;
+let silenceDelay = 900;
+let currentTranscript = '';
+let audioCtx = null;
+let analyserNode = null;
+let volRafId = null;
+let hasItems = false;
+let isActive = false;
+
+const KEYWORDS = [
+  '病院','薬','今日','明日','今','後で','緊急','大事','重要',
+  'いつ','どこ','誰','何','なぜ','どうして','お金','家','仕事',
+  '学校','電話','名前','住所','手術','検査','診察','処方','先生',
+  '時間','場所','費用','保険','予約','注意','危険','救急','アレルギー',
+];
+
+// ===== INIT =====
+window.addEventListener('DOMContentLoaded', () => {
+  const saved = localStorage.getItem('hearing_api_key');
+  if (saved) {
+    apiKey = saved;
+    document.getElementById('api-key-input').value = saved;
+    startMainScreen();
+  }
+});
+
+// ===== SETUP =====
+function togglePw() {
+  const inp = document.getElementById('api-key-input');
+  inp.type = inp.type === 'password' ? 'text' : 'password';
+}
+
+function startWithKey() {
+  const val = document.getElementById('api-key-input').value.trim();
+  if (!val) { alert('APIキーを入力してください'); return; }
+  if (!val.startsWith('sk-ant-')) {
+    if (!confirm('APIキーが sk-ant- で始まっていません。このまま続けますか？')) return;
+  }
+  apiKey = val;
+  localStorage.setItem('hearing_api_key', apiKey);
+  startMainScreen();
+}
+
+function startWithoutKey() {
+  apiKey = '';
+  localStorage.removeItem('hearing_api_key');
+  startMainScreen();
+}
+
+function showSetup() {
+  isActive = false;
+  stopRecognition();
+  stopVolumeMonitor();
+  document.getElementById('main-screen').style.display = 'none';
+  document.getElementById('setup-screen').style.display = 'flex';
+  // reset state
+  hasItems = false;
+  currentTranscript = '';
+  document.getElementById('summary-area').innerHTML = '<div id="summary-placeholder">話しかけてください…</div>';
+  document.getElementById('fulltext-content').innerHTML = '<span id="current-interim"></span>';
+}
+
+function startMainScreen() {
+  document.getElementById('setup-screen').style.display = 'none';
+  document.getElementById('main-screen').style.display = 'flex';
+  isActive = true;
+  initSpeechRecognition();
+  initVolumeMonitor();
+}
+
+// ===== SPEECH RECOGNITION =====
+function initSpeechRecognition() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) {
+    setStatus('音声認識に非対応', false);
+    return;
+  }
+  recognition = new SR();
+  recognition.lang = 'ja-JP';
+  recognition.continuous = true;
+  recognition.interimResults = true;
+  recognition.maxAlternatives = 1;
+
+  recognition.onstart = () => setStatus('聴いています', true);
+
+  recognition.onresult = (e) => {
+    let interim = '';
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      const r = e.results[i];
+      if (r.isFinal) {
+        currentTranscript += r[0].transcript;
+      } else {
+        interim += r[0].transcript;
+      }
+    }
+    setInterim(currentTranscript + interim);
+
+    clearTimeout(silenceTimer);
+    if ((currentTranscript + interim).trim()) {
+      silenceTimer = setTimeout(() => {
+        const text = currentTranscript.trim();
+        if (text) {
+          currentTranscript = '';
+          setInterim('');
+          processUtterance(text);
+        }
+      }, silenceDelay);
+    }
+  };
+
+  recognition.onerror = (e) => {
+    if (e.error === 'no-speech' || e.error === 'aborted') return;
+    setStatus('エラー: ' + e.error, false);
+  };
+
+  recognition.onend = () => {
+    if (!isActive) return;
+    // Force-process leftover transcript before restarting
+    if (currentTranscript.trim()) {
+      const text = currentTranscript.trim();
+      currentTranscript = '';
+      setInterim('');
+      processUtterance(text);
+    }
+    setTimeout(() => {
+      if (!isActive) return;
+      try { recognition.start(); } catch (_) {}
+    }, 200);
+  };
+
+  try { recognition.start(); } catch (_) { setStatus('起動エラー', false); }
+}
+
+function stopRecognition() {
+  clearTimeout(silenceTimer);
+  if (!recognition) return;
+  recognition.onend = null;
+  try { recognition.stop(); } catch (_) {}
+  recognition = null;
+}
+
+function setStatus(text, active) {
+  document.getElementById('listen-status').textContent = text;
+  document.getElementById('listen-dot').classList.toggle('active', active);
+}
+
+function setInterim(text) {
+  const el = document.getElementById('current-interim');
+  if (el) el.textContent = text;
+}
+
+// ===== VOLUME MONITOR =====
+async function initVolumeMonitor() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    analyserNode = audioCtx.createAnalyser();
+    analyserNode.fftSize = 512;
+    analyserNode.smoothingTimeConstant = 0.7;
+    audioCtx.createMediaStreamSource(stream).connect(analyserNode);
+
+    const buf = new Uint8Array(analyserNode.frequencyBinCount);
+    const bar = document.getElementById('volume-bar');
+
+    function tick() {
+      analyserNode.getByteFrequencyData(buf);
+      let sum = 0;
+      for (let i = 0; i < buf.length; i++) sum += buf[i];
+      const pct = Math.min(100, (sum / buf.length) * 3.2);
+      bar.style.width = pct + '%';
+      volRafId = requestAnimationFrame(tick);
+    }
+    tick();
+  } catch (_) {
+    // Microphone denied — volume bar stays empty
+  }
+}
+
+function stopVolumeMonitor() {
+  if (volRafId) { cancelAnimationFrame(volRafId); volRafId = null; }
+  if (audioCtx) { audioCtx.close().catch(() => {}); audioCtx = null; }
+}
+
+// ===== TEXT PROCESSING =====
+async function processUtterance(text) {
+  addToFulltext(text);
+
+  if (apiKey) {
+    const thinking = addThinking();
+    try {
+      const result = await callClaude(text);
+      removeThinking(thinking);
+      if (result.type !== 'skip') addSummaryItem(result.type, result.text || text);
+    } catch (err) {
+      removeThinking(thinking);
+      const fb = fallback(text);
+      if (fb.type !== 'skip') addSummaryItem(fb.type, fb.text || text);
+    }
+  } else {
+    const fb = fallback(text);
+    if (fb.type !== 'skip') addSummaryItem(fb.type, fb.text || text);
+  }
+}
+
+async function callClaude(text) {
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true',
+    },
+    body: JSON.stringify({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 80,
+      messages: [{
+        role: 'user',
+        content:
+`難聴者向け会話サポートです。以下の発言を分析し、JSONのみを返してください。
+
+発言:「${text}」
+
+ルール:
+1. 疑問文（？を含む・疑問の意図がある）→ {"type":"question","text":"元の発言そのまま"}
+2. 相槌・擬音・10文字以下の短い発言 → {"type":"skip"}
+3. 15文字以下で既に短い → {"type":"raw","text":"そのまま"}
+4. それ以外 → {"type":"summary","text":"15文字以内の要約"}
+
+JSONのみ。説明不要。`,
+      }],
+    }),
+  });
+
+  if (!res.ok) {
+    const err = await res.text().catch(() => '');
+    throw new Error('API ' + res.status + ': ' + err);
+  }
+
+  const data = await res.json();
+  const raw = data.content[0].text.trim();
+  const m = raw.match(/\{[\s\S]*?\}/);
+  if (!m) throw new Error('no JSON');
+  return JSON.parse(m[0]);
+}
+
+function fallback(text) {
+  const t = text.trim();
+  if (t.length <= 10) return { type: 'skip' };
+
+  const fillers = /^(はい|うん|うんうん|ええ|あ+|う+|ん+|そう|なるほど|へえ|ほお|あはは|笑|うふふ)[。、！!～\s]*$/;
+  if (fillers.test(t)) return { type: 'skip' };
+
+  const isQ = /[？?]/.test(t)
+    || /[かね][。！\s]*$/.test(t)
+    || /(ですか|ますか|でしょうか|でしょ|かな|かしら)/.test(t);
+  if (isQ) return { type: 'question', text: t };
+
+  if (t.length <= 15) return { type: 'raw', text: t };
+  return { type: 'summary', text: t.slice(0, 14) + '…' };
+}
+
+// ===== UI HELPERS =====
+const KW_RE = new RegExp('(' + KEYWORDS.map(k => k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|') + ')', 'g');
+
+function highlight(text) {
+  return text.replace(KW_RE, '<strong class="kw">$1</strong>');
+}
+
+const BADGE_MAP = {
+  question: { cls: 'badge-question', label: '疑問' },
+  summary:  { cls: 'badge-summary',  label: '要約' },
+  raw:      { cls: 'badge-raw',      label: 'そのまま' },
+};
+
+function addSummaryItem(type, text) {
+  const area = document.getElementById('summary-area');
+  const ph = document.getElementById('summary-placeholder');
+  if (ph) ph.remove();
+  hasItems = true;
+
+  const info = BADGE_MAP[type] || BADGE_MAP.raw;
+  const div = document.createElement('div');
+  div.className = 'summary-item';
+  div.innerHTML =
+    `<span class="badge ${info.cls}">${info.label}</span>` +
+    `<div class="summary-text">${highlight(text)}</div>`;
+  area.appendChild(div);
+  area.scrollTop = area.scrollHeight;
+
+  // Keep at most 6 items
+  const items = area.querySelectorAll('.summary-item');
+  if (items.length > 6) items[0].remove();
+}
+
+function addThinking() {
+  const area = document.getElementById('summary-area');
+  const ph = document.getElementById('summary-placeholder');
+  if (ph) ph.style.visibility = 'hidden';
+
+  const div = document.createElement('div');
+  div.className = 'thinking-item';
+  div.innerHTML =
+    `<div class="thinking-label">考えています` +
+    `<span class="dots"><span></span><span></span><span></span></span></div>`;
+  area.appendChild(div);
+  area.scrollTop = area.scrollHeight;
+  return div;
+}
+
+function removeThinking(el) {
+  if (el && el.parentNode) el.remove();
+  if (!hasItems) {
+    const ph = document.getElementById('summary-placeholder');
+    if (ph) ph.style.visibility = '';
+  }
+}
+
+function addToFulltext(text) {
+  const content = document.getElementById('fulltext-content');
+  const interim = document.getElementById('current-interim');
+  const span = document.createElement('span');
+  span.innerHTML = highlight(text) + '　';
+  content.insertBefore(span, interim);
+  const area = document.getElementById('fulltext-area');
+  area.scrollTop = area.scrollHeight;
+}
+</script>
+</body>
+</html>
